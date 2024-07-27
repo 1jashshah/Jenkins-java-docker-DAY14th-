@@ -1,50 +1,28 @@
 pipeline {
     agent any
-
-    environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerid')
-        DOCKERHUB_REPO = '1jashshah/day14th'
-        GIT_REPO = 'https://github.com/1jashshah/Jenkins-java-docker-DAY13th-.git'
-    }
-
     stages {
         stage('Clone Repository') {
             steps {
-                git url: "${env.GIT_REPO}", branch: 'main'
+                git url:'https://github.com/1jashshah/Jenkins-java-docker-DAY13th-.git', branch: 'main'
             }
         }
-
         stage('Build Docker Image') {
             steps {
-                script {
-                    dockerImage = docker.build("${env.DOCKERHUB_REPO}:${env.BUILD_ID}")
-                }
+                sh 'docker build -t 1jashshah/day14th'
             }
         }
-
         stage('Push Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', "${env.DOCKERHUB_CREDENTIALS}") {
-                        dockerImage.push()
-                        dockerImage.push('latest')
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerid')]) {
+                    sh 'docker login'
+                    sh 'docker push 1jashshah/day14th'
                 }
             }
         }
-
         stage('Deploy Container') {
             steps {
-                script {
-                    dockerImage.run('-d -p 8080:8080')
-                }
+                sh 'docker run -d -p 8089:8080 1jashshah/day14th'
             }
-        }
-    }
-
-    post {
-        always {
-            cleanWs()
         }
     }
 }
