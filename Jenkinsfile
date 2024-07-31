@@ -39,6 +39,7 @@ pipeline {
         stage('Output') {
             steps{
                 script{
+                    sh 'javac App.java'
                     sh 'java App.java'
                 }
             }
