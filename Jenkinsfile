@@ -1,28 +1,60 @@
 pipeline {
     agent any
+
+    environment {
+        registry = 'docker.io'  
+        registryCredential = 'dockerid' 
+    }
+
     stages {
-        stage('Clone Repository') {
+        stage ('Checkout') {
             steps {
-                git url:'https://github.com/1jashshah/Jenkins-java-docker-DAY13th-.git', branch: 'main'
+                git url: 'https://github.com/1jashshah/Jenkins-java-docker-DAY14th-.git', credentialsId: 'gitid', branch: 'main'
             }
         }
-        stage('Build Docker Image') {
+
+        stage ('Docker Build') {
             steps {
-                sh 'docker build -t 1jashshah/day14th'
-            }
-        }
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerid')]) {
-                    sh 'docker login'
-                    sh 'docker push 1jashshah/day14th'
+                script {
+                    docker.withRegistry('', registryCredential){
+                        def customImage = docker.build("1jashshah/myjava-app:${env.BUILD_ID}")
+                        customImage.push()
+                    }
                 }
             }
         }
+
         stage('Deploy Container') {
             steps {
-                sh 'docker run -d -p 8089:8080 1jashshah/day14th'
+
+                script {
+                    docker.withRegistry('', registryCredential) {
+                        def runContainer = docker.image("1jashshah/myjava-app:${env.BUILD_ID}").run('--name mynew-container -d')
+                        echo "Container ID: ${runContainer.id}"
+                    }
+                }
             }
+        }
+
+        stage('Output') {
+            steps{
+                script{
+                    sh 'java App.java'
+                }
+            }
+        }
+
+
+    }
+    post {
+        always {
+            echo 'Pipeline Finished'
+        }
+        success {
+            echo 'Status : Successfull'
+        }
+        failure {
+            echo 'Status : Failed'
         }
     }
 }
