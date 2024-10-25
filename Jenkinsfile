@@ -1,61 +1,44 @@
 pipeline {
     agent any
-
     environment {
-        registry = 'docker.io'  
-        registryCredential = 'dockerid' 
+        TF_WORKSPACE = ''
     }
-
     stages {
-        stage ('Checkout') {
-            steps {
-                git url: 'https://github.com/1jashshah/Jenkins-java-docker-DAY14th-.git', credentialsId: 'gitid', branch: 'main'
-            }
-        }
-
-        stage ('Docker Build') {
-            steps {
-                script {
-                    docker.withRegistry('', registryCredential){
-                        def customImage = docker.build("1jashshah/myjava-app:${env.BUILD_ID}")
-                        customImage.push()
-                    }
-                }
-            }
-        }
-
-        stage('Deploy Container') {
-            steps {
-
-                script {
-                    docker.withRegistry('', registryCredential) {
-                        def runContainer = docker.image("1jashshah/myjava-app:${env.BUILD_ID}").run('--name mynew-container -d')
-                        echo "Container ID: ${runContainer.id}"
-                    }
-                }
-            }
-        }
-
-        stage('Output') {
+        stage('git-checkout'){
             steps{
-                script{
-                    sh 'javac App.java'
-                    sh 'java App.java'
+                git url: 'https://github.com/1jashshah/TF_WITH_JEN.git', branch: 'main', credentialsId: 'gitid'
+            }
+        }
+        stage('Initialize Terraform') {
+            steps {
+                script {
+                 
+                    sh 'terraform init'
+                    sh  'terraform plan'
                 }
             }
         }
-
-
+        stage('Apply Terraform for All Workspaces') {
+            steps {
+                script {
+                    def workspaces = ['dev', 'ops', 'stage', 'prod']
+                    
+                    for (workspace in workspaces) {
+                        TF_WORKSPACE = workspace
+                        
+                        sh "terraform workspace select ${workspace} || terraform workspace new ${workspace}"
+                        sh "terraform apply -var-file=${workspace}.tfvars -auto-approve"
+                    }
+                }
+            }
+        }
     }
+
     post {
         always {
-            echo 'Pipeline Finished'
-        }
-        success {
-            echo 'Status : Successfull'
-        }
-        failure {
-            echo 'Status : Failed'
+            script {
+                sh 'terraform workspace select default'
+            }
         }
     }
 }
