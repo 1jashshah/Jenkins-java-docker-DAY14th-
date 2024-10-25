@@ -6,15 +6,13 @@ pipeline {
     stages {
         stage('git-checkout'){
             steps{
-                git url: 'https://github.com/1jashshah/TF_WITH_JEN.git', branch: 'main', credentialsId: 'gitid'
+                git url: 'https://github.com/1jashshah/TF_WITH_JEN.git', branch: 'main'
             }
         }
         stage('Initialize Terraform') {
             steps {
                 script {
-                 
                     sh 'terraform init'
-                    sh  'terraform plan'
                 }
             }
         }
@@ -24,9 +22,11 @@ pipeline {
                     def workspaces = ['dev', 'ops', 'stage', 'prod']
                     
                     for (workspace in workspaces) {
-                        TF_WORKSPACE = workspace
+                        // Try to select the workspace, create if it doesn't exist
+                        def workspaceSelectCmd = "terraform workspace new ${workspace} || terraform workspace select ${workspace} "
+                        sh workspaceSelectCmd
                         
-                        sh "terraform workspace new ${workspace} ||terraform workspace select ${workspace}"
+                        // Apply the configuration for the selected workspace
                         sh "terraform apply -var-file=${workspace}.tfvars -auto-approve"
                     }
                 }
